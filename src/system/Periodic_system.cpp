@@ -692,7 +692,6 @@ doublevar Periodic_system::ewaldIon() {
         r1(d)=ions.r(d,i)-ions.r(d,j);
       }
 
-      IonIon -= 2.0*ions.charge(i)*ions.charge(j)*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
 
       //----over 2 lattice vectors
       for(int kk=-nlatvec; kk <=nlatvec; kk++) {
@@ -709,6 +708,8 @@ doublevar Periodic_system::ewaldIon() {
         }
       }
       //----done lattice vectors
+
+      IonIon += -2.0*ions.charge(i)*ions.charge(j)*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
     }
   }
 
@@ -869,9 +870,6 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
       sample->getEIDist(e,ion, eidist);
       for(int d=0; d< 3; d++) r1(d)=eidist(d+2);
 
-      elecIon_real_separated(e) += 2.0*ions.charge(ion)*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
-      elecIon_real += 2.0*ions.charge(ion)*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
-
       //----over  lattice vectors
       for(int kk=-nlatvec; kk <=nlatvec; kk++) {
         for(int jj=-nlatvec; jj <=nlatvec; jj++) {
@@ -886,6 +884,10 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
         }
       }
       //----done lattice vectors
+
+      elecIon_real_separated(e) += 2.0*ions.charge(ion)*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
+      elecIon_real += 2.0*ions.charge(ion)*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
+
     }
   }
   //cout << "electron-electron " << endl;
@@ -899,9 +901,6 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
       sample->getEEDist(e1,e2, eidist);
       for(int d=0; d< 3; d++) r1(d)=eidist(d+2);
 
-      elecElec_real -= 2.0*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
-      elecElec_real_separated(e1) -= 2.0*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
-      elecElec_real_separated(e2) -= 2.0*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
 
       //----over  lattice vectors
       for(int kk=-nlatvec; kk <=nlatvec; kk++) {
@@ -919,6 +918,10 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
         }
       }
       //----done lattice vectors
+
+      elecElec_real += -2.0*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
+      elecElec_real_separated(e1) += -2.0*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
+      elecElec_real_separated(e2) += -2.0*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
     }
   }
 
