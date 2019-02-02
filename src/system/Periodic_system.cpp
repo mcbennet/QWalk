@@ -344,11 +344,11 @@ int Periodic_system::read(vector <string> & words,
     tempheight=fabs(tempheight)/sqrt(length);
     if(tempheight < smallestheight ) smallestheight=tempheight;
   }
-  debug_write(cout, "elsu ", smallestheight,"\n");
+  single_write(cout, "elsu ", smallestheight,"\n");
 
   alpha=5.0/smallestheight; //Heuristic?  Stolen from Lubos's code.
 
-  debug_write(cout, "alpha ", alpha, "\n");
+  single_write(cout, "alpha ", alpha, "\n");
 
   ///--------------------------------------------
   // Finding the g-points for the Ewald sum
@@ -619,6 +619,13 @@ Add in the correction terms for summing over non-zero l
 
 void Periodic_system::constEwald() {
 
+  // MCB: Code constant terms for fractional charges
+  int bg_grid = 100;
+  int nfracs = 3*bg_grid;
+  doublevar cellcharge = -totnelectrons;
+  for (int ion=0; ion<ions.size(); ion++)
+    cellcharge+=ions.charge(ion);
+  doublevar negfrac = -cellcharge/double(nfracs);
 
   self_ee=0;
   self_ei=0;
@@ -637,12 +644,23 @@ void Periodic_system::constEwald() {
     }
   }
 
+  // MCB Adding contribution from fractions
+  // Given that all fractional charges are the same
+  // this should be able to be written without a loop
+  for(int ion=0; ion < nions; ion++) {
+    ionIonSum+=nfracs*negfrac*ions.charge(ion);
+  }
+  ionElecSum+=nfracs*negfrac*(-totnelectrons);
+  ionIonSum+=negfrac*negfrac*nfracs*(nfracs-1)/2.0;
+
   doublevar ionSum2=0; //The sums over the squares of q_i
   doublevar elecSum2=0;
   elecSum2=totnelectrons;
   for(int ion=0; ion < nions; ion++) {
     ionSum2+=ions.charge(ion)*ions.charge(ion);
   }
+  ionSum2+=nfracs*negfrac*negfrac;
+
 
   doublevar squareconst=-.5*(2*alpha/sqrt(pi)+pi/(cellVolume*alpha*alpha));
   doublevar ijconst=-pi/(cellVolume*alpha*alpha);
@@ -677,7 +695,31 @@ doublevar Periodic_system::ewaldIon() {
   assert(ion_sin.GetDim(0) >= ngpoints);
   assert(ion_cos.GetDim(0) >= ngpoints);
 
+  // MCB: Add here the fractional charges as well as their positions and include
+  // in ewald along with the other ions.
+  // Generate uniformly distributed fractional charges throughout unit cell
 
+  // MCB: Now evenly distribute the fractions
+  int bg_grid = 100;
+  int nfracs = 3*bg_grid;
+
+
+  doublevar cellcharge = -totnelectrons;
+  for (int ion=0; ion<ions.size(); ion++)
+    cellcharge+=ions.charge(ion);
+
+
+  doublevar negfrac = -cellcharge/double(nfracs);
+  Array2 <doublevar> fracr(3,nfracs);
+  int fracidx=0;
+  for(int kk=0; kk <bg_grid; kk++) {
+    for(int d=0; d< 3; d++) {
+      fracr(d,fracidx)  =((double(kk)+0.5)/double(bg_grid))*latVec(0,d);
+      fracr(d,fracidx+1)=((double(kk)+0.5)/double(bg_grid))*latVec(1,d);
+      fracr(d,fracidx+2)=((double(kk)+0.5)/double(bg_grid))*latVec(2,d);
+    }
+    fracidx+=3;
+  }
 
   int nions=ions.size();
   const int nlatvec=2;  //Number of lattice vectors to iterate over
@@ -692,8 +734,6 @@ doublevar Periodic_system::ewaldIon() {
         r1(d)=ions.r(d,i)-ions.r(d,j);
       }
 
-      IonIon -= 2.0*ions.charge(i)*ions.charge(j)*pi/(3.0*cellVolume)*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2));
-
       //----over 2 lattice vectors
       for(int kk=-nlatvec; kk <=nlatvec; kk++) {
         for(int jj=-nlatvec; jj <=nlatvec; jj++) {
@@ -704,6 +744,63 @@ doublevar Periodic_system::ewaldIon() {
             doublevar r=sqrt(r2(0)*r2(0)+r2(1)*r2(1)+r2(2)*r2(2));
 
             IonIon+=ions.charge(i)*ions.charge(j)*erfcm(alpha*r)/r;
+//            cout << "r " << r << "  ionion " << IonIon << " i " << i << " j " << j << endl;
+          }
+        }
+      }
+      //----done lattice vectors
+    }
+  }
+
+  // MCB: FracIon
+  for(int i=0; i< nions; i++)
+  {
+    for(int j=0; j<nfracs; j++)
+    {
+      for(int d=0; d< 3; d++) {
+        r1(d)=ions.r(d,i)-fracr(d,j);
+      }
+            
+      //----over 2 lattice vectors
+      for(int kk=-nlatvec; kk <=nlatvec; kk++) {
+        for(int jj=-nlatvec; jj <=nlatvec; jj++) {
+          for(int ii=-nlatvec; ii <=nlatvec; ii++) {
+            for(int d=0; d< 3; d++) {
+              r2(d)=r1(d)+kk*latVec(0,d)+jj*latVec(1,d)+ii*latVec(2,d);
+            }
+            doublevar r=sqrt(r2(0)*r2(0)+r2(1)*r2(1)+r2(2)*r2(2));
+
+            IonIon+=ions.charge(i)*negfrac*erfcm(alpha*r)/r;
+
+
+//            cout << "r " << r << "  ionion " << IonIon << " i " << i << " j " << j << endl;
+          }
+        }
+      }
+      //----done lattice vectors
+    }
+  }
+
+  // MCB: FracFrac
+  for(int i=0; i< nfracs; i++)
+  {
+    for(int j=0; j<i; j++)
+    {
+      for(int d=0; d< 3; d++) {
+        r1(d)=fracr(d,i)-fracr(d,j);
+      }
+      
+      //----over 2 lattice vectors
+      for(int kk=-nlatvec; kk <=nlatvec; kk++) {
+        for(int jj=-nlatvec; jj <=nlatvec; jj++) {
+          for(int ii=-nlatvec; ii <=nlatvec; ii++) {
+            for(int d=0; d< 3; d++) {
+              r2(d)=r1(d)+kk*latVec(0,d)+jj*latVec(1,d)+ii*latVec(2,d);
+            }
+            doublevar r=sqrt(r2(0)*r2(0)+r2(1)*r2(1)+r2(2)*r2(2));
+
+            IonIon+=negfrac*negfrac*erfcm(alpha*r)/r;
+
 //            cout << "r " << r << "  ionion " << IonIon << " i " << i << " j " << j << endl;
           }
         }
@@ -727,6 +824,18 @@ doublevar Periodic_system::ewaldIon() {
       //if(gpt==0) cout << "dot product " << dotprod << endl;
       ion_sin(gpt)+=ions.charge(ion)*sin(dotprod);
       ion_cos(gpt)+=ions.charge(ion)*cos(dotprod);
+      //cout << "sine " << sin(dotprod) << "  cos " << cos(dotprod) << " charge " << ions.charge(ion)
+      //     << "  total sin " << ion_sin(gpt) << "  ion_cos " << ion_cos(gpt)
+      //     << endl;
+    }
+
+    // MCB: Fracs
+    for(int ion=0; ion <nfracs; ion++) {
+      double dotprod=0;
+      for(int d=0; d< 3; d++) dotprod+=fracr(d,ion)*gpoint(gpt, d);
+      //if(gpt==0) cout << "dot product " << dotprod << endl;
+      ion_sin(gpt)+=negfrac*sin(dotprod);
+      ion_cos(gpt)+=negfrac*cos(dotprod);
       //cout << "sine " << sin(dotprod) << "  cos " << cos(dotprod) << " charge " << ions.charge(ion)
       //     << "  total sin " << ion_sin(gpt) << "  ion_cos " << ion_cos(gpt)
       //     << endl;
@@ -853,10 +962,38 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
   sample->updateEIDist();
   //cout << "done updatedist" << endl;
 
+  // MCB: Add here the fractinal charges as well as their positions and include
+  // in ewald along with the other ions.
+  // Generate uniformly distributed fractional charges throughout unit cell
+
+  // MCB: Now evenly distribute the fractions
+  int bg_grid = 100;
+  int nfracs = 3*bg_grid;
+
+  doublevar cellcharge = -totnelectrons;
+  for (int ion=0; ion<ions.size(); ion++)
+    cellcharge+=ions.charge(ion);
+
+  doublevar negfrac = -cellcharge/double(nfracs);
+  cout << cellcharge << endl;
+  Array2 <doublevar> fracr(3,nfracs);
+  int fracidx=0;
+  for(int kk=0; kk <bg_grid; kk++) {
+    for(int d=0; d< 3; d++) {
+      fracr(d,fracidx)  =((double(kk)+0.5)/double(bg_grid))*latVec(0,d);
+      fracr(d,fracidx+1)=((double(kk)+0.5)/double(bg_grid))*latVec(1,d);
+      fracr(d,fracidx+2)=((double(kk)+0.5)/double(bg_grid))*latVec(2,d);
+    }
+    fracidx+=3;
+  }
+
   Array1 <doublevar> eidist(5);
   int nions=ions.size();
   int nlatvec=1;
   Array1 <doublevar> r1(3), r2(3);
+
+  Array2 <doublevar> elecpos(totnelectrons, 3); // Moved up
+  sample->getAllElectronPos(elecpos);
 
   //cout << "electron-ion " << endl;
   //-------------Electron-ion real part
@@ -868,9 +1005,6 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
 
       sample->getEIDist(e,ion, eidist);
       for(int d=0; d< 3; d++) r1(d)=eidist(d+2);
-
-      elecIon_real_separated(e) += 2.0*ions.charge(ion)*pi/(3.0*cellVolume)*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2));
-      elecIon_real += 2.0*ions.charge(ion)*pi/(3.0*cellVolume)*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2));
 
       //----over  lattice vectors
       for(int kk=-nlatvec; kk <=nlatvec; kk++) {
@@ -887,9 +1021,33 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
       }
       //----done lattice vectors
     }
+
+    // MCB: electronsFrac
+    for(int ion=0; ion < nfracs; ion++) {
+
+      for(int d=0; d< 3; d++) r1(d)=fracr(d,ion)-elecpos(e,d);
+
+      //----over  lattice vectors
+      for(int kk=-nlatvec; kk <=nlatvec; kk++) {
+        for(int jj=-nlatvec; jj <=nlatvec; jj++) {
+          for(int ii=-nlatvec; ii <=nlatvec; ii++) {
+            for(int d=0; d< 3; d++) {
+              r2(d)=r1(d)+kk*latVec(0,d)+jj*latVec(1,d)+ii*latVec(2,d);
+            }
+            doublevar r=sqrt(r2(0)*r2(0)+r2(1)*r2(1)+r2(2)*r2(2));
+	        elecIon_real_separated(e) -= negfrac*erfcm(alpha*r)/r;
+            elecIon_real-=negfrac*erfcm(alpha*r)/r;
+
+          }
+        }
+      }
+      //----done lattice vectors
+    }
+
   }
   //cout << "electron-electron " << endl;
   //-------------Electron-electron real part
+
 
   doublevar elecElec_real=0;
   Array1 <doublevar> elecElec_real_separated(totnelectrons); 
@@ -898,10 +1056,6 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
     for(int e2 =e1+1; e2 < totnelectrons; e2++) {
       sample->getEEDist(e1,e2, eidist);
       for(int d=0; d< 3; d++) r1(d)=eidist(d+2);
-      
-      elecElec_real -= 2.0*pi/(3.0*cellVolume)*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2));
-      elecElec_real_separated(e1) -= 2.0*pi/(3.0*cellVolume)*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2));
-      elecElec_real_separated(e2) -= 2.0*pi/(3.0*cellVolume)*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2));
 
       //----over  lattice vectors
       for(int kk=-nlatvec; kk <=nlatvec; kk++) {
@@ -928,8 +1082,8 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
 
 
   doublevar rdotg;
-  Array2 <doublevar> elecpos(totnelectrons, 3);
-  sample->getAllElectronPos(elecpos);
+  //Array2 <doublevar> elecpos(totnelectrons, 3); // Moved up
+  //sample->getAllElectronPos(elecpos);
   doublevar elecIon_recip=0, elecElec_recip=0;
   Array1 <doublevar> elecIon_recip_separated(totnelectrons), 
     elecElec_recip_separated(totnelectrons);
