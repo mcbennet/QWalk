@@ -684,6 +684,7 @@ doublevar Periodic_system::ewaldIon() {
 
   Array1 <doublevar> r1(3), r2(3);
   doublevar IonIon=0;
+  doublevar dipole=0;
   for(int i=0; i< nions; i++)
   {
     for(int j=0; j<i; j++)
@@ -709,10 +710,11 @@ doublevar Periodic_system::ewaldIon() {
       }
       //----done lattice vectors
 
-      IonIon += -2.0*ions.charge(i)*ions.charge(j)*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
+      dipole += -2.0*ions.charge(i)*ions.charge(j)*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
     }
   }
 
+  std::cout << "my dipole: " << dipole << std::endl;
 
   debug_write(cout, "real space ion-ion ", IonIon,"\n");
 
