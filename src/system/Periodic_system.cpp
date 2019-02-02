@@ -714,7 +714,7 @@ doublevar Periodic_system::ewaldIon() {
     }
   }
 
-  std::cout << "my dipole: " << dipole << std::endl;
+  std::cout << "my ion-ion dipole: " << dipole << std::endl;
 
   debug_write(cout, "real space ion-ion ", IonIon,"\n");
 
@@ -749,7 +749,7 @@ doublevar Periodic_system::ewaldIon() {
 
   debug_write(cout,"reciprocal space ion ", eion,"\n");
   //cout << "eion " << eion << " IonIon " << IonIon << endl;
-  return eion+IonIon;
+  return eion+IonIon+dipole;
 }
 
 //----------------------------------------------------------------------
@@ -859,10 +859,14 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
   Array1 <doublevar> eidist(5);
   int nions=ions.size();
   int nlatvec=1;
-  Array1 <doublevar> r1(3), r2(3);
+  Array1 <doublevar> rdip(3), r1(3), r2(3);
+  
+  Array2 <doublevar> elecpos(totnelectrons, 3);
+  sample->getAllElectronPos(elecpos);
 
   //cout << "electron-ion " << endl;
   //-------------Electron-ion real part
+  doublevar dipole=0;
   doublevar elecIon_real=0;
   Array1<doublevar> elecIon_real_separated(totnelectrons); 
   elecIon_real_separated = 0.0; 
@@ -870,7 +874,10 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
     for(int ion=0; ion < nions; ion++) {
 
       sample->getEIDist(e,ion, eidist);
-      for(int d=0; d< 3; d++) r1(d)=eidist(d+2);
+      for(int d=0; d< 3; d++){
+        r1(d)=eidist(d+2);
+        rdip(d)=elecpos(e,d)-ions.r(d,ion);
+      }
 
       //----over  lattice vectors
       for(int kk=-nlatvec; kk <=nlatvec; kk++) {
@@ -887,8 +894,8 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
       }
       //----done lattice vectors
 
-      elecIon_real_separated(e) += 2.0*ions.charge(ion)*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
-      elecIon_real += 2.0*ions.charge(ion)*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
+      elecIon_real_separated(e) += 2.0*ions.charge(ion)*pi*(rdip(0)*rdip(0)+rdip(1)*rdip(1)+rdip(2)*rdip(2))/(3.0*cellVolume);
+      dipole += 2.0*ions.charge(ion)*pi*(rdip(0)*rdip(0)+rdip(1)*rdip(1)+rdip(2)*rdip(2))/(3.0*cellVolume);
 
     }
   }
@@ -901,7 +908,10 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
   for(int e1=0; e1< totnelectrons; e1++) {
     for(int e2 =e1+1; e2 < totnelectrons; e2++) {
       sample->getEEDist(e1,e2, eidist);
-      for(int d=0; d< 3; d++) r1(d)=eidist(d+2);
+      for(int d=0; d< 3; d++){
+        r1(d)=eidist(d+2);
+        rdip(d)=elecpos(e1,d)-elecpos(e2,d);
+      }
 
 
       //----over  lattice vectors
@@ -921,20 +931,20 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
       }
       //----done lattice vectors
 
-      elecElec_real += -2.0*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
-      elecElec_real_separated(e1) += -2.0*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
-      elecElec_real_separated(e2) += -2.0*pi*(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2))/(3.0*cellVolume);
+      dipole += -2.0*pi*(rdip(0)*rdip(0)+rdip(1)*rdip(1)+rdip(2)*rdip(2))/(3.0*cellVolume);
+      elecElec_real_separated(e1) += -2.0*pi*(rdip(0)*rdip(0)+rdip(1)*rdip(1)+rdip(2)*rdip(2))/(3.0*cellVolume);
+      elecElec_real_separated(e2) += -2.0*pi*(rdip(0)*rdip(0)+rdip(1)*rdip(1)+rdip(2)*rdip(2))/(3.0*cellVolume);;
     }
   }
 
   //cout << "electron recip " << endl;
 
   //---------electron reciprocal part
+  std::cout << "my elec dipole: " << dipole << std::endl;
+  std::cout << "cellVolume=: " << cellVolume << std::endl;
 
 
   doublevar rdotg;
-  Array2 <doublevar> elecpos(totnelectrons, 3);
-  sample->getAllElectronPos(elecpos);
   doublevar elecIon_recip=0, elecElec_recip=0;
   Array1 <doublevar> elecIon_recip_separated(totnelectrons), 
     elecElec_recip_separated(totnelectrons);
@@ -982,7 +992,7 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
     //  + 2.0*(elecElec_recip_separated(e)); 
         //noted that the elecElec_recip_separated term already removed the self interaction term; 
   }
-  return elecElec_real + elecIon_real + elecElec_recip+elecIon_recip;
+  return elecElec_real + elecIon_real + elecElec_recip+elecIon_recip + dipole;
 }
 
 //------------------------------------------------------------------------
