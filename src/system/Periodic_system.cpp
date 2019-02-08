@@ -844,7 +844,6 @@ void Periodic_system::calcLocWithTestPos(Sample_point * sample, Array1 <doubleva
   }
 }
 
-
 doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
   //cout << sample << endl;
   sample->updateEEDist();
@@ -857,6 +856,9 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
   int nlatvec=1;
   Array1 <doublevar> r1(3), r2(3);
 
+  Array2 <doublevar> elecpos(totnelectrons, 3);
+  sample->getAllElectronPos(elecpos);
+
   //cout << "electron-ion " << endl;
   //-------------Electron-ion real part
   doublevar elecIon_real=0;
@@ -866,7 +868,7 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
     for(int ion=0; ion < nions; ion++) {
 
       sample->getEIDist(e,ion, eidist);
-      for(int d=0; d< 3; d++) r1(d)=eidist(d+2);
+      for(int d=0; d< 3; d++) r1(d)=elecpos(e,d)-ions.r(ion,d);
 
       //----over  lattice vectors
       for(int kk=-nlatvec; kk <=nlatvec; kk++) {
@@ -893,7 +895,7 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
   for(int e1=0; e1< totnelectrons; e1++) {
     for(int e2 =e1+1; e2 < totnelectrons; e2++) {
       sample->getEEDist(e1,e2, eidist);
-      for(int d=0; d< 3; d++) r1(d)=eidist(d+2);
+      for(int d=0; d< 3; d++) r1(d)=elecpos(e1,d)-elecpos(e2,d);
 
       //----over  lattice vectors
       for(int kk=-nlatvec; kk <=nlatvec; kk++) {
@@ -920,8 +922,6 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
 
 
   doublevar rdotg;
-  Array2 <doublevar> elecpos(totnelectrons, 3);
-  sample->getAllElectronPos(elecpos);
   doublevar elecIon_recip=0, elecElec_recip=0;
   Array1 <doublevar> elecIon_recip_separated(totnelectrons), 
     elecElec_recip_separated(totnelectrons);
