@@ -990,7 +990,7 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
   Array1 <doublevar> eidist(5);
   int nions=ions.size();
   int nlatvec=1;
-  Array1 <doublevar> r1(3), r2(3);
+  Array1 <doublevar> r1(3), r2(3), rtest(3);
 
   Array2 <doublevar> elecpos(totnelectrons, 3); // Moved up
   sample->getAllElectronPos(elecpos);
@@ -1004,7 +1004,13 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
     for(int ion=0; ion < nions; ion++) {
 
       sample->getEIDist(e,ion, eidist);
-      for(int d=0; d< 3; d++) r1(d)=eidist(d+2);
+      for(int d=0; d< 3; d++){
+        r1(d)=eidist(d+2);
+        rtest(d)=elecpos(e,d)-ions.r(d,ion);
+      }
+      // std::cout << "Delta Vecs: " << std::endl;
+      // std::cout << "   r1: (" << r1(0) << "," << r1(1) << "," << r1(2) << ")" << std::endl;
+      // std::cout << "rtest: (" << rtest(0) << "," << rtest(1) << "," << rtest(2) << ")" << std::endl;
 
       //----over  lattice vectors
       for(int kk=-nlatvec; kk <=nlatvec; kk++) {
