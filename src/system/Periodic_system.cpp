@@ -620,8 +620,7 @@ Add in the correction terms for summing over non-zero l
 void Periodic_system::constEwald() {
 
   // MCB: Code constant terms for fractional charges
-  int bg_grid = 100;
-  int nfracs = 3*bg_grid;
+  int nfracs = 1;
   doublevar cellcharge = -totnelectrons;
   for (int ion=0; ion<ions.size(); ion++)
     cellcharge+=ions.charge(ion);
@@ -700,8 +699,7 @@ doublevar Periodic_system::ewaldIon() {
   // Generate uniformly distributed fractional charges throughout unit cell
 
   // MCB: Now evenly distribute the fractions
-  int bg_grid = 100;
-  int nfracs = 3*bg_grid;
+  int nfracs = 1;
 
 
   doublevar cellcharge = -totnelectrons;
@@ -711,14 +709,8 @@ doublevar Periodic_system::ewaldIon() {
 
   doublevar negfrac = -cellcharge/double(nfracs);
   Array2 <doublevar> fracr(3,nfracs);
-  int fracidx=0;
-  for(int kk=0; kk <bg_grid; kk++) {
-    for(int d=0; d< 3; d++) {
-      fracr(d,fracidx)  =((double(kk)+0.5)/double(bg_grid))*latVec(0,d);
-      fracr(d,fracidx+1)=((double(kk)+0.5)/double(bg_grid))*latVec(1,d);
-      fracr(d,fracidx+2)=((double(kk)+0.5)/double(bg_grid))*latVec(2,d);
-    }
-    fracidx+=3;
+  for(int d=0; d< 3; d++) {
+    fracr(d,0)  = 0.0;
   }
 
   int nions=ions.size();
@@ -965,8 +957,7 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
   // Generate uniformly distributed fractional charges throughout unit cell
 
   // MCB: Now evenly distribute the fractions
-  int bg_grid = 100;
-  int nfracs = 3*bg_grid;
+  int nfracs =1;
 
   doublevar cellcharge = -totnelectrons;
   for (int ion=0; ion<ions.size(); ion++)
@@ -975,14 +966,8 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
   doublevar negfrac = -cellcharge/double(nfracs);
   cout << cellcharge << endl;
   Array2 <doublevar> fracr(3,nfracs);
-  int fracidx=0;
-  for(int kk=0; kk <bg_grid; kk++) {
-    for(int d=0; d< 3; d++) {
-      fracr(d,fracidx)  =((double(kk)+0.5)/double(bg_grid))*latVec(0,d);
-      fracr(d,fracidx+1)=((double(kk)+0.5)/double(bg_grid))*latVec(1,d);
-      fracr(d,fracidx+2)=((double(kk)+0.5)/double(bg_grid))*latVec(2,d);
-    }
-    fracidx+=3;
+  for(int d=0; d< 3; d++) {
+    fracr(d,0)  = 0.0;
   }
 
   Array1 <doublevar> eidist(5);
