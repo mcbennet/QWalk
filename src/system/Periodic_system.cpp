@@ -728,13 +728,12 @@ doublevar Periodic_system::ewaldIon() {
   doublevar IonIon=0;
   for(int i=0; i< nions; i++)
   {
-    std::cout << "Ions pos: (" << ions.r(0,i) << "," << ions.r(1,i) << "," << ions.r(2,i) << ")" << std::endl;
+    
     for(int j=0; j<i; j++)
     {
       for(int d=0; d< 3; d++) {
         r1(d)=ions.r(d,i)-ions.r(d,j);
       }
-      std::cout << "Ions dist: (" << r1(0) << "," << r1(1) << "," << r1(2) << ")" << std::endl;
 
       //----over 2 lattice vectors
       for(int kk=-nlatvec; kk <=nlatvec; kk++) {
@@ -992,7 +991,7 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
   Array1 <doublevar> eidist(5);
   int nions=ions.size();
   int nlatvec=1;
-  Array1 <doublevar> r1(3), r2(3);
+  Array1 <doublevar> r1(3), r2(3),rtest(3);
 
   Array2 <doublevar> elecpos(totnelectrons, 3); // Moved up
   sample->getAllElectronPos(elecpos);
@@ -1008,10 +1007,23 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
       sample->getEIDist(e,ion, eidist);
       for(int d=0; d< 3; d++){
         r1(d)=eidist(d+2);
+        //if(elecpos(e,d)-ions.r(ion,d)> (latVec(0,d)+latVec(1,d)+latVec(2,d))/2.0){
+
+        //  rtest(d)=elecpos(e,d)-ions.r(ion,d)-latVec(0,d)-latVec(1,d)-latVec(2,d);
+
+        //} else if (elecpos(e,d)-ions.r(ion,d)< -(latVec(0,d)+latVec(1,d)+latVec(2,d))/2.0){
+
+        //  rtest(d)=elecpos(e,d)-ions.r(ion,d)+latVec(0,d)+latVec(1,d)+latVec(2,d);
+
+        //} else {
+
+          rtest(d)=elecpos(e,d)-ions.r(ion,d);
+
+        //}
       }
-      // std::cout << "Delta Vecs: " << std::endl;
-      // std::cout << "   r1: (" << r1(0) << "," << r1(1) << "," << r1(2) << ")" << std::endl;
-      // std::cout << "rtest: (" << rtest(0) << "," << rtest(1) << "," << rtest(2) << ")" << std::endl;
+      std::cout << "Delta Vecs: " << std::endl;
+      std::cout << "   r1: (" << r1(0) << "," << r1(1) << "," << r1(2) << ")" << std::endl;
+      std::cout << "rtest: (" << rtest(0) << "," << rtest(1) << "," << rtest(2) << ")" << std::endl;
 
       //----over  lattice vectors
       for(int kk=-nlatvec; kk <=nlatvec; kk++) {
