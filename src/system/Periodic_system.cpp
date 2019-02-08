@@ -154,7 +154,7 @@ int Periodic_system::read(vector <string> & words,
 
   for(int i=0; i< ndim; i++) {
     for(int j=0; j< ndim; j++) {
-      latVec(i,j)=atof(latvectxt[i*ndim+j].c_str());
+      latVec(i,j)=2.0*atof(latvectxt[i*ndim+j].c_str()); // MCB
     }
   }
   inverseLatVec.Resize(ndim,ndim);
@@ -591,7 +591,62 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
   //cout << " ewalde " << ewalde << " xc_correction " << xc_correction << endl;
   //we do not want the xc_correction in the total energy in order to compare 
   //to all other qmc codes, it is still printed out so can be added by hand 
-  return ion_ewald+self_ii+self_ee+self_ei+ewalde; //+xc_correction;
+
+  Array2<doublevar> elecpos(totnelectrons,3);
+  sample->getAllElectronPos(elecpos);
+
+  int natoms = ions.size();
+  Array1<doublevar> ion_pos1(3);
+  Array1<doublevar> ion_pos2(3);
+  doublevar correction = 0;
+  //ion-ion
+  for (int at1 = 0; at1 < natoms; at1++)
+  {
+      getIonPos(at1,ion_pos1);
+      for (int at2 = at1+1; at2 < natoms; at2++)
+      {
+          getIonPos(at2,ion_pos2);
+          doublevar r2 = 0;
+          for (int d = 0; d < 3; d++)
+          {
+              r2 += (ion_pos1(d)-ion_pos2(d))*(ion_pos1(d)-ion_pos2(d));
+          }
+          correction -= ions.charge(at1)*ions.charge(at2)/sqrt(4.0*r2);
+          correction += ions.charge(at1)*ions.charge(at2)/sqrt(r2);
+      }
+  }
+  //el-el
+  for (int e1=0; e1<totnelectrons; e1++)
+  {
+      for (int e2=e1+1; e2 < totnelectrons; e2++)
+      {
+          doublevar r2 = 0;
+          for (int d = 0; d < 3; d++)
+          {
+              r2 += (elecpos(e1,d)-elecpos(e2,d))*(elecpos(e1,d)-elecpos(e2,d));
+          }
+          correction -= 1.0/sqrt(4.0*r2);
+          correction += 1.0/sqrt(r2);
+      }
+  }
+  //el-ion
+  for (int e1=0; e1<totnelectrons; e1++)
+  {
+      for (int at1=0; at1 < natoms; at1++)
+      {
+          doublevar r2 = 0;
+          getIonPos(at1,ion_pos1);
+          for (int d = 0; d < 3; d++)
+          {
+              r2 += (elecpos(e1,d)-ion_pos1(d))*(elecpos(e1,d)-ion_pos1(d));
+          }
+          correction += ions.charge(at1)/sqrt(4.0*r2);
+          correction -= ions.charge(at1)/sqrt(r2);
+      }
+  }
+
+
+  return ion_ewald+self_ii+self_ee+self_ei+ewalde+correction; //+xc_correction;
 }
 
 
@@ -698,7 +753,7 @@ doublevar Periodic_system::ewaldIon() {
         for(int jj=-nlatvec; jj <=nlatvec; jj++) {
           for(int ii=-nlatvec; ii <=nlatvec; ii++) {
             for(int d=0; d< 3; d++) {
-              r2(d)=r1(d)+kk*latVec(0,d)+jj*latVec(1,d)+ii*latVec(2,d);
+              r2(d)=2.0*r1(d)+kk*latVec(0,d)+jj*latVec(1,d)+ii*latVec(2,d);
             }
             doublevar r=sqrt(r2(0)*r2(0)+r2(1)*r2(1)+r2(2)*r2(2));
 
@@ -722,7 +777,7 @@ doublevar Periodic_system::ewaldIon() {
 
     for(int ion=0; ion <nions; ion++) {
       double dotprod=0;
-      for(int d=0; d< 3; d++) dotprod+=ions.r(d,ion)*gpoint(gpt, d);
+      for(int d=0; d< 3; d++) dotprod+=2.0*ions.r(d,ion)*gpoint(gpt, d);
       //if(gpt==0) cout << "dot product " << dotprod << endl;
       ion_sin(gpt)+=ions.charge(ion)*sin(dotprod);
       ion_cos(gpt)+=ions.charge(ion)*cos(dotprod);
@@ -873,7 +928,7 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
         for(int jj=-nlatvec; jj <=nlatvec; jj++) {
           for(int ii=-nlatvec; ii <=nlatvec; ii++) {
             for(int d=0; d< 3; d++) {
-              r2(d)=r1(d)+kk*latVec(0,d)+jj*latVec(1,d)+ii*latVec(2,d);
+              r2(d)=2.0*r1(d)+kk*latVec(0,d)+jj*latVec(1,d)+ii*latVec(2,d);
             }
             doublevar r=sqrt(r2(0)*r2(0)+r2(1)*r2(1)+r2(2)*r2(2));
 	    elecIon_real_separated(e) -= ions.charge(ion)*erfcm(alpha*r)/r;
@@ -900,7 +955,7 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
         for(int jj=-nlatvec; jj <=nlatvec; jj++) {
           for(int ii=-nlatvec; ii <=nlatvec; ii++) {
             for(int d=0; d< 3; d++) {
-              r2(d)=r1(d)+kk*latVec(0,d)+jj*latVec(1,d)+ii*latVec(2,d);
+              r2(d)=2.0*r1(d)+kk*latVec(0,d)+jj*latVec(1,d)+ii*latVec(2,d);
             }
             doublevar r=sqrt(r2(0)*r2(0)+r2(1)*r2(1)+r2(2)*r2(2));
 
@@ -933,9 +988,9 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
     Array1<doublevar> cs(totnelectrons); 
     
     for(int e=0; e< totnelectrons; e++) {
-      rdotg=gpoint(gpt, 0)*elecpos(e,0)
-            +gpoint(gpt, 1)*elecpos(e,1)
-            +gpoint(gpt, 2)*elecpos(e,2);
+      rdotg=gpoint(gpt, 0)*2.0*elecpos(e,0)
+            +gpoint(gpt, 1)*2.0*elecpos(e,1)
+            +gpoint(gpt, 2)*2.0*elecpos(e,2);
       sn(e) = sin(rdotg); 
       cs(e) = cos(rdotg);
       sum_sin += sn(e); 
