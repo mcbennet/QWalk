@@ -773,8 +773,6 @@ doublevar Periodic_system::ewaldIon() {
 
             IonIon+=ions.charge(i)*negfrac*erfcm(alpha*r)/r;
 
-
-//            cout << "r " << r << "  ionion " << IonIon << " i " << i << " j " << j << endl;
           }
         }
       }
@@ -802,7 +800,6 @@ doublevar Periodic_system::ewaldIon() {
 
             IonIon+=negfrac*negfrac*erfcm(alpha*r)/r;
 
-//            cout << "r " << r << "  ionion " << IonIon << " i " << i << " j " << j << endl;
           }
         }
       }
@@ -991,7 +988,7 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
   Array1 <doublevar> eidist(5);
   int nions=ions.size();
   int nlatvec=1;
-  Array1 <doublevar> r1(3), r2(3),rtest(3);
+  Array1 <doublevar> r1(3), r2(3);
 
   Array2 <doublevar> elecpos(totnelectrons, 3); // Moved up
   sample->getAllElectronPos(elecpos);
@@ -1007,23 +1004,7 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
       sample->getEIDist(e,ion, eidist);
       for(int d=0; d< 3; d++){
         r1(d)=eidist(d+2);
-        //if(elecpos(e,d)-ions.r(ion,d)> (latVec(0,d)+latVec(1,d)+latVec(2,d))/2.0){
-
-        //  rtest(d)=elecpos(e,d)-ions.r(ion,d)-latVec(0,d)-latVec(1,d)-latVec(2,d);
-
-        //} else if (elecpos(e,d)-ions.r(ion,d)< -(latVec(0,d)+latVec(1,d)+latVec(2,d))/2.0){
-
-        //  rtest(d)=elecpos(e,d)-ions.r(ion,d)+latVec(0,d)+latVec(1,d)+latVec(2,d);
-
-        //} else {
-
-          rtest(d)=elecpos(e,d)-ions.r(ion,d);
-
-        //}
       }
-      std::cout << "Delta Vecs: " << std::endl;
-      std::cout << "   r1: (" << r1(0) << "," << r1(1) << "," << r1(2) << ")" << std::endl;
-      std::cout << "rtest: (" << rtest(0) << "," << rtest(1) << "," << rtest(2) << ")" << std::endl;
 
       //----over  lattice vectors
       for(int kk=-nlatvec; kk <=nlatvec; kk++) {
@@ -1062,7 +1043,7 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
               r2(d)=r1(d)+kk*latVec(0,d)+jj*latVec(1,d)+ii*latVec(2,d);
             }
             doublevar r=sqrt(r2(0)*r2(0)+r2(1)*r2(1)+r2(2)*r2(2));
-	        elecIon_real_separated(e) -= negfrac*erfcm(alpha*r)/r;
+                elecIon_real_separated(e) -= negfrac*erfcm(alpha*r)/r;
             elecIon_real-=negfrac*erfcm(alpha*r)/r;
 
           }
