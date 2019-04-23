@@ -708,7 +708,12 @@ doublevar Periodic_system::ewaldIon() {
         }
       }
       //----done lattice vectors
+
+      if(ions.getLabel(i).compare("X") == 0)
+          IonIon-=ions.charge(i)*ions.charge(j)/sqrt(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2));
+
     }
+
   }
 
 
@@ -882,6 +887,11 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
         }
       }
       //----done lattice vectors
+
+      if(ions.getLabel(ion).compare("X") == 0)
+          elecIon_real+=ions.charge(ion)/sqrt(r1(0)*r1(0)+r1(1)*r1(1)+r1(2)*r1(2));
+
+
     }
   }
   //cout << "electron-electron " << endl;
